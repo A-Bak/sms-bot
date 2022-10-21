@@ -1,8 +1,6 @@
 import time
-import atexit
 
 from flask import Flask
-from apscheduler.schedulers.background import BackgroundScheduler
 
 
 def print_current_time():
@@ -10,11 +8,7 @@ def print_current_time():
 
 
 def create_app() -> Flask:
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(func=print_current_time, trigger="interval", seconds=30)
-    scheduler.start()
-    atexit.register(lambda: scheduler.shutdown())
-
+    # create_ schd
     return Flask(__name__)
 
 
