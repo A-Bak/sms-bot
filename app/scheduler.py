@@ -3,13 +3,11 @@ from typing import Callable, Any, Dict
 from abc import ABC
 from dataclasses import dataclass
 
-import time
 import atexit
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
 
-from error import InvalidTimeOfDayError
+from app.error import InvalidTimeOfDayError
 
 
 class Scheduler(ABC):
@@ -24,7 +22,7 @@ class TimeOfDay:
     minute: int
     second: int
 
-    def __post__init__(self):
+    def __post_init__(self):
         if not (0 <= self.hour <= 24
                 and 0 <= self.minute <= 60
                 and 0 <= self.second <= 60):
