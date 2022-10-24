@@ -1,54 +1,51 @@
-from typing import Callable, Dict, TypeAlias
+from typing import List, Dict, TypeAlias
 from abc import ABC
 
-import os
-from functools import partial
-
-from dotenv import load_dotenv
 from twilio.rest import Client
+from twilio.rest.api.v2010.account.message import MessageInstance
+from twilio.base.exceptions import TwilioRestException
+
+Message: TypeAlias = Dict[str, str]
 
 
-Response: TypeAlias = Dict[str, str]
+class PhoneMessageAPI(ABC):
+    def send_message(self, from_number: str, to_number: str, message: str) -> Message:
+        """Send message through the SMS REST API."""
+
+    def get_sent_messages(self, message_limit: int) -> List[Message]:
+        """Return a list of N=message_limit most recently sent SMS messages."""
 
 
-class SMSMessageAPI(ABC):
-
-    def send_message(self, from_number: str, to_number: str, message: str) -> Response:
-        '''Send message through the SMS REST API.'''
-
-
-class TwilioSMSAPI(SMSMessageAPI):
-
+class TwilioSMSAPI(PhoneMessageAPI):
     def __init__(self, account_sid: str, auth_token: str) -> None:
         self.client = Client(account_sid, auth_token)
 
-    def send_message(self, from_number: str, to_number: str, message: str) -> Response:
-        return self.client.messages.create(
-            from_=from_number,
-            to=to_number,
-            body=message
-        )
+    def send_message(
+        self, from_number: str, to_number: str, message: str
+    ) -> MessageInstance:
+        try:
+            return self.client.messages.create(
+                from_=from_number, to=to_number, body=message
+            )
+        except TwilioRestException as e:
+            print("Error: Failed to send message through Twilio SMS REST API.")
+            raise e
+
+    def get_sent_messages(self, message_limit: int = 50) -> List[MessageInstance]:
+        return self.client.messages.list(limit=message_limit)
 
 
-def main():
-    twilio_phone_number = os.environ['TWILIO_PHONE_NUMBER']
-    verified_phone_number = os.environ['VERIFIED_PHONE_NUMBER']
+class TwilioWhatsAppAPI(PhoneMessageAPI):
+    def __init__(self, account_sid: str, auth_token: str) -> None:
+        self.client = Client(account_sid, auth_token)
 
-    twilio_api = TwilioSMSAPI(
-        os.environ['TWILIO_ACCOUNT_SID'],
-        os.environ['TWILIO_AUTH_TOKEN']
-    )
-
-    response = twilio_api.send_message(
-        twilio_phone_number,
-        verified_phone_number,
-        "Example message."
-    )
-
-    for x in response:
-        print(x)
-
-
-if __name__ == "__main__":
-    load_dotenv()
-    main()
+    def send_message(self, from_number: str, to_number: str, message: str) -> Message:
+        try:
+            return self.client.messages.create(
+                from_=f"whatsapp:{from_number}",
+                to=f"whatsapp:{to_number}",
+                message=message,
+            )
+        except TwilioRestException as e:
+            print("Error: Failed to send message through Twilio WhatsApp REST API.")
+            raise e
