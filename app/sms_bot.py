@@ -3,6 +3,7 @@ import time
 from flask import Flask
 
 from app.scheduler import DailyScheduler, TimeOfDay
+from app.tasks.task import weather_report_task
 
 
 def print_current_time():
@@ -14,7 +15,8 @@ def create_app() -> Flask:
     app.scheduler = DailyScheduler()
     app.scheduler.shutdown_at_exit()
 
-    app.scheduler.schedule_task(print_current_time(), TimeOfDay(7, 30, 0))
+    weather_report_task("Brno")
+    app.scheduler.schedule_task(print_current_time, TimeOfDay(7, 30, 0))
 
     return app
 
@@ -32,5 +34,4 @@ if __name__ == "__main__":
     host = "127.0.0.1"
     port = 5000
     debug = False
-
     app.run(host=host, port=port, debug=debug)
