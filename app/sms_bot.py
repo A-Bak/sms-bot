@@ -1,5 +1,6 @@
 from functools import partial
 import time
+from functools import partial
 
 from flask import Flask
 
@@ -17,7 +18,13 @@ def create_app() -> Flask:
     app.scheduler.shutdown_at_exit()
 
     app.scheduler.schedule_task(
-        partial(weather_report_task, "Brno"), TimeOfDay(7, 30, 0)
+        partial(weather_report_task, "Brno"), TimeOfDay(15, 10, 0)
+    )
+    app.scheduler.schedule_task(
+        partial(weather_report_task, "Brno"), TimeOfDay(15, 15, 0)
+    )
+    app.scheduler.schedule_task(
+        partial(weather_report_task, "Brno"), TimeOfDay(15, 20, 0)
     )
 
     return app

@@ -2,11 +2,14 @@ from typing import TypeAlias
 from abc import ABC
 
 import requests
+from datetime import datetime
 
-from app.error import ConnectionFailedWttrInAPI
+from app.error import ConnectionFailedWeatherAPI, LimitExceededWttrInAPI
 
 
 FormatedMessage: TypeAlias = str
+
+RESPONSE_OK = 200
 
 
 class WeatherAPI(ABC):
@@ -22,17 +25,41 @@ class OpenWeatherMapAPI(WeatherAPI):
         self.api_key = api_key
 
     def get_weather_report(self, location: str) -> FormatedMessage:
-        response = requests.get(
+        response = self._get_request(location=location)
+
+        if response.status_code == RESPONSE_OK:
+            return self._format_message(response)
+        else:
+            response.raise_for_status()
+
+    def get_temperature(self, location: str) -> float:
+        raise NotImplementedError
+
+    def _get_request(self, location: str) -> requests.Response:
+        url = (
             "https://api.openweathermap.org/data/2.5/weather?"
             + "appid="
             + self.api_key
             + "&q="
             + location
+            + "&units=metric"
         )
-        return response.json()
+        try:
+            return requests.get(url)
+        except requests.ConnectionError as e:
+            raise ConnectionFailedWeatherAPI(self.__class__, url) from e
 
-    def get_temperature(self, location: str) -> float:
-        raise NotImplementedError
+    def _format_message(self, response: requests.Response):
+        r = response.json()
+        return (
+            f'{r["name"]}: {datetime.now().time()}\n'
+            + f'Desc: {r["weather"][0]["main"]}, {r["weather"][0]["description"]}\n'
+            + f'Temp: {r["main"]["temp"]} °C\n'
+            + f'Feel: {r["main"]["feels_like"]} °C\n'
+            + f'Wind: {r["wind"]["speed"]} km/h\n'
+            + f'Humi: {r["main"]["humidity"]} %\n'
+            + f'SunS: {datetime.fromtimestamp(r["sys"]["sunset"]).strftime("%X")}\n'
+        )
 
 
 class WttrInAPI(WeatherAPI):
@@ -52,7 +79,14 @@ class WttrInAPI(WeatherAPI):
             )
 
     def get_weather_report(self, location: str) -> FormatedMessage:
-        return self._get_request(location, self.wttr_format).text
+        response = self._get_request(location, self.wttr_format)
+
+        if response.status_code == RESPONSE_OK and not response.text.startswith(
+            "Unknown location;"
+        ):
+            return response.text
+        else:
+            raise LimitExceededWttrInAPI
 
     def get_temperature(self, location: str) -> float:
         raise NotImplementedError
@@ -60,10 +94,6 @@ class WttrInAPI(WeatherAPI):
     def _get_request(self, location: str, wttr_format: str) -> requests.Response:
         url = f"https://wttr.in/{location}?format={self.wttr_format}"
         try:
-            response = requests.get(url)
-
-            if response.status_code == 200:
-                return response
-
+            return requests.get(url)
         except requests.ConnectionError as e:
-            raise ConnectionFailedWttrInAPI(url) from e
+            raise ConnectionFailedWeatherAPI(self.__class__, url) from e
