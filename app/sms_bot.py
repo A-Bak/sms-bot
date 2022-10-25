@@ -7,6 +7,11 @@ from flask import Flask
 from app.scheduler import DailyScheduler, TimeOfDay
 from app.tasks.task import weather_report_task
 
+import logging
+
+logging.basicConfig()
+logging.getLogger("apscheduler").setLevel(logging.DEBUG)
+
 
 def print_current_time():
     print(time.strftime("%A, %d. %B %Y %I:%M:%S %p"))
@@ -18,13 +23,13 @@ def create_app() -> Flask:
     app.scheduler.shutdown_at_exit()
 
     app.scheduler.schedule_task(
-        partial(weather_report_task, "Brno"), TimeOfDay(15, 10, 0)
+        partial(weather_report_task, "Brno"), TimeOfDay(15, 30, 0)
     )
     app.scheduler.schedule_task(
-        partial(weather_report_task, "Brno"), TimeOfDay(15, 15, 0)
+        partial(weather_report_task, "Brno"), TimeOfDay(15, 35, 0)
     )
     app.scheduler.schedule_task(
-        partial(weather_report_task, "Brno"), TimeOfDay(15, 20, 0)
+        partial(weather_report_task, "Brno"), TimeOfDay(15, 40, 0)
     )
 
     return app
